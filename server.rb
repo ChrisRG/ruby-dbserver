@@ -6,9 +6,42 @@
 require 'socket'
 
 server = TCPServer.new('localhost', 4000)
+DATABASE = {}
+puts "Database server listening on port 4000..."
 
-loop {
-  client = server.accept
-  request = client.readpartial(2048)
-  puts request
-}
+# Parse the URI
+def parse_request(request)
+  puts "Parsing"
+  # Parse the URL path
+  path = parse_path(request.split[1])
+end
+
+
+# Check validity of path
+# Two options: get and set
+def parse_path(path)
+   route, query = path.split('?')
+   p route.delete('/')
+   parse_query(query)
+end
+
+def parse_query(query)
+  key, value = query.split('=')
+  p key
+  p value
+end
+
+while client = server.accept
+  # client = server.accept
+  # request = client.readpartial(2048)
+  request = client.gets
+  parse_request(request)
+
+  client.print "HTTP/1.1 200\r\n" # 1
+  client.print "Content-Type: text/html\r\n" # 2
+  client.print "\r\n" # 3
+  client.print "Hello world! The time is #{Time.now}" #4
+
+  client.close
+end
+
