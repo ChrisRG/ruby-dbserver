@@ -1,46 +1,61 @@
-# Basic database server for RC pairing interview!
-# Before your interview, write a program that runs a server that is accessible on http://localhost:4000/. When your server receives a request on http://localhost:4000/set?somekey=somevalue it should store the passed key and value in memory. When it receives a request on http://localhost:4000/get?key=somekey it should return the value stored at somekey.
-
-# During your interview, you will pair on saving the data to a file. You can start with simply appending each write to the file, and work on making it more efficient if you have time.
-
 require 'socket'
 
 server = TCPServer.new('localhost', 4000)
 DATABASE = {}
+ROUTES = ["get", "set"]
+
 puts "Database server listening on port 4000..."
 
-# Parse the URI
 def parse_request(request)
-  puts "Parsing"
-  # Parse the URL path
-  path = parse_path(request.split[1])
+  return parse_path(request.split[1])
 end
 
 
-# Check validity of path
-# Two options: get and set
 def parse_path(path)
    route, query = path.split('?')
-   p route.delete('/')
-   parse_query(query)
+   route.delete!('/')
+
+   return invalid_route unless ROUTES.include?(route)
+
+   parsed = parse_query(query)
+
+   send(route, parsed)
+   return response(200, "#{route.upcase} request at #{Time.now}")
 end
 
 def parse_query(query)
   key, value = query.split('=')
-  p key
-  p value
+end
+
+def get(params)
+  puts "Getting #{params}"
+  puts DATABASE[params[1]]
+end
+
+def set(params)
+  puts "Setting #{params}"
+  DATABASE[params[0]] = params[1]
+  p DATABASE
+end
+
+def invalid_route
+  return response(400, "Invalid route / request at #{Time.now}")
+end
+
+def response(code, body)
+   return [
+    "HTTP/1.1 #{code}",
+    "Content-Type: text/html",
+    "\r\n",
+    "#{body}"
+   ].join("\r\n")
 end
 
 while client = server.accept
-  # client = server.accept
-  # request = client.readpartial(2048)
   request = client.gets
-  parse_request(request)
-
-  client.print "HTTP/1.1 200\r\n" # 1
-  client.print "Content-Type: text/html\r\n" # 2
-  client.print "\r\n" # 3
-  client.print "Hello world! The time is #{Time.now}" #4
+  response = parse_request(request)
+  p response
+  client.print(response)
 
   client.close
 end
