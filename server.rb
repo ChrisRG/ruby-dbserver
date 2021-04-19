@@ -10,7 +10,6 @@ def parse_request(request)
   return parse_path(request.split[1])
 end
 
-
 def parse_path(path)
    route, query = path.split('?')
    route.delete!('/')
@@ -19,8 +18,8 @@ def parse_path(path)
 
    parsed = parse_query(query)
 
-   send(route, parsed)
-   return response(200, "#{route.upcase} request at #{Time.now}")
+   msg = send(route, parsed)
+   return response(200, "#{route.upcase} request at #{Time.now}.<br>#{msg}")
 end
 
 def parse_query(query)
@@ -29,13 +28,15 @@ end
 
 def get(params)
   puts "Getting #{params}"
-  puts DATABASE[params[1]]
+  data = DATABASE[params[1]]
+  return "Retrieved #{params[1]}: #{data}"
 end
 
 def set(params)
   puts "Setting #{params}"
   DATABASE[params[0]] = params[1]
   p DATABASE
+  return "Set #{params[0]} with value #{params[1]}"
 end
 
 def invalid_route
@@ -53,10 +54,10 @@ end
 
 while client = server.accept
   request = client.gets
+  puts request
   response = parse_request(request)
-  p response
+  puts "Response: #{response}"
   client.print(response)
 
   client.close
 end
-
