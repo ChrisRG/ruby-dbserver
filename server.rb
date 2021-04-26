@@ -20,12 +20,14 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
 
   # For now assume a single ? in the URL, remove '/' since no index page
   def parse_path(path)
-   route, query = path.split('?')
-   [route.delete('/'), query]
+    route, query = path.split('?')
+    [route.delete('/'), query]
   end 
 
   # Queries separated into key/value pairs to be passed to the routes
   def parse_query
+    return nil if @query.nil?
+
     key, value = @query.split('=')
   end
 
@@ -45,7 +47,7 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
   # To prepare the response message, invoke (via meta-programming!) the proper method with route name, if valid 
   # Responses here consist of a status code and a simple message
   def prepare_response
-    unless valid_route?(@route)
+    unless valid_route?(@route) && !@query.nil?  # Error if route invalid or query is nil
       error(404, 'route not found.')
     else
       self.send(route, parse_query)
@@ -71,6 +73,8 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
     key = params[0]
     value = params[1]
     verb = DATABASE[key] ? 'updated' : 'created'
+
+    return error(404, "poorly formatted SET request") unless value
     DATABASE[params[0]] = params[1]
     success("#{verb} #{key}: #{value}")
   end
