@@ -64,7 +64,7 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
     if data
       success("retrieved #{key}: #{data}")
     else
-      error(404, "key not found")
+      error(404, "#{key} not found")
     end
   end
 
