@@ -6,6 +6,7 @@
 # http://localhost:4000/get?key=somekey => returns the value stored at somekey
 
 require 'socket'
+require 'csv'
 
 DATABASE = {}     # TODO: save the database to a file!
 
@@ -60,7 +61,8 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
     return error(404, "poorly formatted GET request") unless params[0] == 'key'
 
     key = params[1]
-    data = DATABASE[key]
+    # data = DATABASE[key]
+    data = DB.find(key)
     if data
       success("retrieved #{key}: #{data}")
     else
@@ -96,10 +98,34 @@ class Response
   end
 end
 
+class DatabaseHandler
+  # Load with server from CSV
+  #
+  def initialize(csv_file)
+    @csv = csv_file
+    @data = {}
+  end
+  
+  def find(key)
+    @data[key] 
+  end
+  def load_csv
+    CSV.foreach(@csv) do |row|
+      @data[row[0].to_sym] = row[1]
+    end
+  end
+
+  def save_csv
+  end
+end
+
 # To start the server: use socket to create a new local instance of a TCP server on port 4000
 server = TCPServer.new('localhost', 4000)
 
 puts "Database server listening on port 4000..."
+
+DB = DatabaseHandler.new('data.csv')
+puts "Initializing DB server"
 
 while client = server.accept
   # Upon connection: create a request, passing in 1024 bytes from the client
