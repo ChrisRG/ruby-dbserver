@@ -13,6 +13,8 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
   # For now assume a single ? in the URL, remove '/' since no index page
   def parse_path(path)
     route, query = path.split('?')
+    return route if route == '/' 
+
     [route.delete('/'), query]
   end 
 
@@ -40,11 +42,11 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
   # To prepare the response message, invoke (via meta-programming!) the proper method with route name, if valid 
   # Responses here consist of a status code and a simple message
   def prepare_response
-    unless valid_route?(@route)  # Error if route invalid or query is nil
-      error(404, 'route not found.')
-    else
-      self.send(route, parse_query)
-    end
+    self.send(route, parse_query)
+  end
+
+  def method_missing(m, *args, &block)
+    error(404, "page not found")
   end
 
 ## Routing functions -- could probably use a separate class!
@@ -82,6 +84,10 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
         .join("\r\n")
     end
     success(200, "\r\n" + msg)  
+  end
+
+  def /(params)
+    success(200, 'homepage')
   end
 end
 
