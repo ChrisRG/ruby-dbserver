@@ -5,9 +5,8 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
   attr_reader :route, :query
 
   def initialize(request)
-    puts "[#{Time.now}]\r\n#{request}"
+    puts "[#{Time.now}]\r\n#{request}" # Log to the server every time a request is initialized
     @route, @query = parse_path(request.split[1])   # Takes 1st element of request (URL path) to parse route and query
-    @routes = ['get', 'set', 'all']
   end
 
   # For now assume a single ? in the URL, remove '/' since no index page
@@ -18,7 +17,7 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
     [route.delete('/'), query]
   end 
 
-  # Queries separated into key/value pairs to be passed to the routes
+  # Single query separated into key/value pair to be passed to the routes
   def parse_query
     return nil if @query.nil?
 
@@ -26,53 +25,46 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
     return { key: key, value: value }
   end
 
-  # Rudimentary route checking: is it in the list?
-  def valid_route?(route)
-    @routes.include?(route)
+  def respond(result, status_code, msg)
+    { status: status_code, body: "[#{Time.now}] #{result} => #{msg}" }
   end
 
-  def error(status, msg)
-    { status: status, body: "[#{Time.now}] Error => #{msg}" }
-  end
-
-  def success(status, msg)
-    { status: status, body: "[#{Time.now}] Success => #{msg}" }
-  end
-
-  # To prepare the response message, invoke (via meta-programming!) the proper method with route name, if valid 
-  # Responses here consist of a status code and a simple message
+  # To prepare the response message, invoke (via meta-programming!) the proper method with route name
   def prepare_response
     self.send(route, parse_query)
   end
 
+  # If an invalid method (i.e. route) is called, return a 404 error
   def method_missing(m, *args, &block)
-    error(404, "page not found")
+    respond('Error', 404, 'page not found')
   end
 
-## Routing functions -- could probably use a separate class!
-  # Params consist of query key/value pair as an array, e.g. ['key', some_key]
+  # Routes
+  def /(params)
+    respond('Success', 200, 'this is the homepage')
+  end
+
   def get(params)
-    return error(404, "poorly formatted GET request") if params.nil? || params[:key] != 'key'
+    return respond('Error', 404, "poorly formatted GET request") if params.nil? || params[:key] != 'key' || params[:value].nil?
     
     key = params[:value].to_sym
     data = DB.find(key)
     if data
-      success(200, "retrieved #{key}: #{data}")
+      respond('Success', 200, "retrieved #{key}: #{data}")
     else
-      error(404, "#{key} not found")
+      respond('Error', 404, "#{key} not found")
     end
   end
 
-  # Params like above: key/value pair, e.g. [some_key, some_value]
   def set(params)
-    return error(404, "poorly formatted SET request") if params.nil? || params[:value].nil?
+    return respond('Error', 404, "poorly formatted SET request") if params.nil? || params[:value].nil?
 
     key = params[:key].to_sym
     value = params[:value]
 
     verb = DB.find(key) ? 'updated' : 'created'
     DB.write(key: key, value: value)
-    success(200, "#{verb} #{key}: #{value}")
+    respond('Success', 200, "#{verb} #{key}: #{value}")
   end
 
   def all(params)
@@ -83,11 +75,7 @@ class Request     # Analyzes HTTP requests and prepares a response (status code 
         .map { |pair| pair.join " : " }
         .join("\r\n")
     end
-    success(200, "\r\n" + msg)  
-  end
-
-  def /(params)
-    success(200, 'homepage')
+    respond('Success', 200, "\r\n" + msg)  
   end
 end
 
@@ -108,8 +96,6 @@ class Response
 end
 
 class DatabaseHandler
-  # Load with server from CSV
-  #
   def initialize(csv_file)
     @csv = csv_file
     @data = {}
@@ -122,9 +108,8 @@ class DatabaseHandler
 
   def write(params = {})
     return "error" if params.empty?
-    p @data
+
     @data[params[:key]] = params[:value]
-    p @data
     save_csv
   end
 
