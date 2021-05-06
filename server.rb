@@ -121,6 +121,8 @@ class DatabaseHandler
     @data.empty?
   end
 
+  private
+
   def load_csv
     CSV.foreach(@csv) do |row|
       @data[row[0].to_sym] = row[1]
@@ -145,11 +147,8 @@ DB = DatabaseHandler.new('data.csv')
 puts "DB server loaded."
 
 while client = server.accept
-  # Upon connection: create a request, passing in 1024 bytes from the client
   request = Request.new(client.readpartial(1024))
-  # The request object will prepare a message and pass it into a response
   response = Response.new(request.prepare_response)
-  # The response object will write back to the client
   response.send(client)
 
   client.close
